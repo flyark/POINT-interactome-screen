@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>POINT Interactome Screen</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><circle cx='5' cy='6' r='3' fill='%232a78d6'/><circle cx='11' cy='10' r='3' fill='%23eb6834'/></svg>">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.30.2/cytoscape.min.js"></script>
+<style>
+:root{
+  color-scheme: light;
+  --surface-0:#f6f6f4; --surface-1:#fcfcfb; --surface-2:#efefec;
+  --text-primary:#0b0b0b; --text-secondary:#52514e; --text-muted:#77766f;
+  --border:#dcdcd6; --border-strong:#c2c2ba;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --neutral:#9b9a92;
+  --seq-1:#e0ebf9; --seq-2:#b3d0ef; --seq-3:#7cade3; --seq-4:#4589d3; --seq-5:#1f5fae;
+  --edge:#c4c3bc; --edge-strong:#6f6e67; --accent:#2a78d6;
+}
+@media (prefers-color-scheme: dark){ :root:where(:not([data-theme="light"])){
+  color-scheme: dark;
+  --surface-0:#121211; --surface-1:#1a1a19; --surface-2:#242422;
+  --text-primary:#ffffff; --text-secondary:#c3c2b7; --text-muted:#8e8d84;
+  --border:#33332f; --border-strong:#4a4a45;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --neutral:#7a7970;
+  --seq-1:#16283d; --seq-2:#1e4471; --seq-3:#2a6bb5; --seq-4:#4f95df; --seq-5:#8fbdf0;
+  --edge:#3d3d38; --edge-strong:#9a998f; --accent:#3987e5;
+}}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --surface-0:#121211; --surface-1:#1a1a19; --surface-2:#242422;
+  --text-primary:#ffffff; --text-secondary:#c3c2b7; --text-muted:#8e8d84;
+  --border:#33332f; --border-strong:#4a4a45;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --neutral:#7a7970;
+  --seq-1:#16283d; --seq-2:#1e4471; --seq-3:#2a6bb5; --seq-4:#4f95df; --seq-5:#8fbdf0;
+  --edge:#3d3d38; --edge-strong:#9a998f; --accent:#3987e5;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--surface-0);color:var(--text-primary);
+  font:14px/1.5 ui-sans-serif,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+header{padding:18px 22px 0;max-width:1500px;margin:0 auto}
+h1{font-size:20px;margin:0 0 2px;letter-spacing:-.01em}
+.sub{color:var(--text-secondary);font-size:13px;margin:0 0 14px}
+.wrap{max-width:1500px;margin:0 auto;padding:0 22px 40px}
+.tabs{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+.tab{padding:7px 15px;border:1px solid var(--border);background:var(--surface-1);color:var(--text-secondary);
+  border-radius:7px;cursor:pointer;font-size:13.5px;font-weight:500}
+.tab[aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.tab .n{opacity:.65;font-weight:400;margin-left:5px;font-variant-numeric:tabular-nums}
+.controls{display:flex;gap:16px;align-items:center;flex-wrap:wrap;padding:11px 14px;background:var(--surface-1);
+  border:1px solid var(--border);border-radius:9px;margin-bottom:12px}
+.ctl{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--text-secondary)}
+.ctl input[type=range]{width:130px;accent-color:var(--accent)}
+.ctl input[type=search]{padding:5px 9px;border:1px solid var(--border-strong);border-radius:6px;
+  background:var(--surface-1);color:var(--text-primary);font-size:13px;width:150px}
+.seg{display:flex;border:1px solid var(--border-strong);border-radius:6px;overflow:hidden}
+.seg button{border:0;background:var(--surface-1);color:var(--text-secondary);padding:5px 10px;font-size:12.5px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent);color:#fff}
+.val{font-variant-numeric:tabular-nums;color:var(--text-primary);font-weight:600;min-width:34px}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:14px}
+@media (max-width:1080px){.grid{grid-template-columns:minmax(0,1fr)}}
+.card{background:var(--surface-1);border:1px solid var(--border);border-radius:11px;overflow:hidden}
+.card h2{font-size:13px;margin:0;padding:11px 14px;border-bottom:1px solid var(--border);
+  color:var(--text-secondary);font-weight:600;letter-spacing:.02em;text-transform:uppercase}
+#cy{height:620px;background:var(--surface-1)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;padding:10px 14px;border-top:1px solid var(--border);font-size:12px;color:var(--text-secondary)}
+.key{display:flex;align-items:center;gap:6px}
+.dot{width:11px;height:11px;border-radius:50%;border:2px solid var(--surface-1);box-shadow:0 0 0 1px var(--border-strong)}
+.side{display:flex;flex-direction:column;gap:14px;min-width:0}
+#volcano{display:block;width:100%;height:270px}
+#info{padding:13px 14px;font-size:13px;min-height:150px}
+#info .gene{font-size:17px;font-weight:650;margin-bottom:1px}
+#info .muted{color:var(--text-muted);font-size:12px}
+#info dl{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;margin:11px 0 0}
+#info dt{color:var(--text-muted);font-size:12px}
+#info dd{margin:0;font-variant-numeric:tabular-nums}
+#info .fn{margin-top:10px;color:var(--text-secondary);font-size:12.5px;line-height:1.45}
+.btn{display:inline-block;margin-top:12px;padding:7px 13px;background:var(--accent);color:#fff;
+  border-radius:7px;text-decoration:none;font-size:13px;font-weight:550}
+.btn.ghost{background:transparent;color:var(--accent);border:1px solid var(--accent)}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+th,td{padding:6px 11px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap}
+th{position:sticky;top:0;background:var(--surface-2);cursor:pointer;font-weight:600;color:var(--text-secondary);z-index:1}
+td.num{text-align:right;font-variant-numeric:tabular-nums}
+.tblwrap{max-height:420px;overflow:auto}
+tbody tr:hover{background:var(--surface-2)}
+a{color:var(--accent)}
+.foot{margin-top:26px;padding-top:14px;border-top:1px solid var(--border);color:var(--text-muted);font-size:12px}
+.loading{padding:40px;text-align:center;color:var(--text-muted)}
+</style>
+</head>
+<body>
+<header>
+  <h1>POINT Interactome Screen</h1>
+  <p class="sub">Protein&ndash;protein interactions predicted by AlphaFold-Multimer among the proteins
+     enriched in each POINT proximity-labeling experiment. Click an edge to open the structure in LIVIA.</p>
+</header>
+
+<div class="wrap">
+  <div class="tabs" role="tablist" id="tabs"></div>
+
+  <div class="controls">
+    <label class="ctl">iLIS &ge; <input type="range" id="thr" min="0.223" max="0.75" step="0.001" value="0.223">
+      <span class="val" id="thrv">0.223</span></label>
+    <label class="ctl">Search <input type="search" id="q" placeholder="gene symbol" autocomplete="off"></label>
+    <span class="ctl">Colour
+      <span class="seg" id="mode">
+        <button data-m="fc" aria-pressed="true">Enrichment</button>
+        <button data-m="loc" aria-pressed="false">Compartment</button>
+      </span></span>
+    <button class="tab" id="reset" style="padding:5px 12px">Reset view</button>
+    <span class="ctl" id="stat" style="margin-left:auto"></span>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <div id="cy"><div class="loading">Loading network&hellip;</div></div>
+      <div class="legend" id="legend"></div>
+    </div>
+
+    <div class="side">
+      <div class="card">
+        <h2>MS enrichment</h2>
+        <svg id="volcano" role="img" aria-label="Volcano plot of MS enrichment"></svg>
+      </div>
+      <div class="card">
+        <h2>Details</h2>
+        <div id="info"><span class="muted">Select a protein or interaction.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:14px">
+    <h2>Positive interactions <span id="tcount" style="font-weight:400;text-transform:none"></span></h2>
+    <div class="tblwrap"><table id="tbl">
+      <thead><tr>
+        <th data-k="source">Protein 1</th><th data-k="target">Protein 2</th>
+        <th data-k="ilis" class="num">iLIS</th><th data-k="lis" class="num">LIS</th>
+        <th data-k="clis" class="num">cLIS</th><th data-k="iptm" class="num">ipTM</th>
+        <th data-k="score" class="num">Score</th><th>Structure</th>
+      </tr></thead><tbody></tbody>
+    </table></div>
+  </div>
+
+  <p class="foot">
+    iLIS from <a href="https://github.com/flyark/AFM-LIS">AFM-LIS</a>; positive at iLIS &ge; 0.223.
+    Structures open in <a href="https://flyark.github.io/LIVIA">LIVIA</a>.
+    <a href="https://github.com/flyark/POINT-interactome-screen">Source</a>
+  </p>
+</div>
+
+<script>
+const BUNDLES = 'https://flyark.github.io/POINT-interactome-screen-structures/bundles/';
+const LIVIA   = 'https://flyark.github.io/LIVIA/universal.html';
+const SCREENS = ['PTBP1','POU2F1','PSMA2'];
+// Compartment is capped at three hues + neutral: an all-pairs form (a network) only
+// validates the first three categorical slots. Everything else folds into "Other".
+const LOC3 = ['Nucleus','Mitochondrion','ER/Golgi'];
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+let NODES=[], EDGES=[], cy=null;
+let screen_='PTBP1', thr=0.223, mode='fc', sortK='ilis', sortAsc=false, sel=null;
+
+/* ---- CSV (quoted fields: the function text contains commas) ---- */
+function parseCSV(text){
+  const rows=[]; let row=[], cur='', q=false;
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(q){ if(c==='"'){ if(text[i+1]==='"'){cur+='"';i++;} else q=false; } else cur+=c; }
+    else if(c==='"') q=true;
+    else if(c===','){ row.push(cur); cur=''; }
+    else if(c==='\n'){ row.push(cur); rows.push(row); row=[]; cur=''; }
+    else if(c!=='\r') cur+=c;
+  }
+  if(cur.length||row.length){ row.push(cur); rows.push(row); }
+  const head=rows.shift();
+  return rows.filter(r=>r.length===head.length).map(r=>Object.fromEntries(head.map((h,i)=>[h,r[i]])));
+}
+const num = v => (v===''||v==null) ? null : +v;
+
+/* ---- sequential ramp: log2FC quintiles, one hue light→dark ---- */
+let fcBreaks=[];
+function fcRamp(v){
+  if(v==null) return css('--neutral');
+  let i=0; while(i<fcBreaks.length && v>fcBreaks[i]) i++;
+  return css('--seq-'+Math.min(5,i+1));
+}
+function locColor(l){
+  const i = LOC3.indexOf(l);
+  return i<0 ? css('--neutral') : css('--s'+(i+1));
+}
+const nodeColor = n => mode==='fc' ? fcRamp(n.log2fc) : locColor(n.location);
+
+/* ---------------- network ---------------- */
+function build(){
+  const ns = NODES.filter(n=>n.screen===screen_);
+  const es = EDGES.filter(e=>e.screen===screen_ && e.ilis>=thr);
+  const keep = new Set(); es.forEach(e=>{keep.add(e.source);keep.add(e.target);});
+
+  const els = [
+    ...ns.filter(n=>keep.has(n.gene)).map(n=>({data:{id:n.gene, label:n.gene, ...n}})),
+    ...es.map(e=>({data:{id:e.source+'|'+e.target, ...e}}))
+  ];
+  if(cy) cy.destroy();
+  document.getElementById('cy').innerHTML='';
+  cy = cytoscape({
+    container: document.getElementById('cy'),
+    elements: els,
+    wheelSensitivity:.2,
+    style:[
+      {selector:'node', style:{
+        'background-color': n=>nodeColor(n.data()),
+        'width': n=>Math.max(17, 13+2.6*Math.sqrt(n.data('degree')||1)*2),
+        'height': n=>Math.max(17, 13+2.6*Math.sqrt(n.data('degree')||1)*2),
+        'label':'data(label)', 'font-size':10, 'font-weight':600,
+        'color':css('--text-primary'),
+        'text-valign':'center','text-halign':'center',
+        'text-outline-width':2.4,'text-outline-color':css('--surface-1'),
+        'border-width':2,'border-color':css('--surface-1'), 'z-index':10 }},
+      {selector:'node[?is_bait]', style:{
+        'shape':'diamond','border-width':3,'border-color':css('--text-primary'),
+        'width':38,'height':38,'font-size':11.5 }},
+      {selector:'edge', style:{
+        'width': e=>1 + 5*Math.min(1,(e.data('ilis')-0.223)/0.4),
+        'line-color':css('--edge'), 'curve-style':'haystack','haystack-radius':0, 'opacity':.85 }},
+      {selector:'.dim', style:{'opacity':.09,'z-index':1}},
+      {selector:'.hit', style:{'line-color':css('--s2'),'width':4.5,'opacity':1,'z-index':20}},
+      {selector:'node.hit', style:{'border-color':css('--s2'),'border-width':3.5}}
+    ],
+    layout:{name:'cose', animate:false, nodeRepulsion:26000, idealEdgeLength:105,
+            nodeOverlap:34, gravity:.35, numIter:2200, componentSpacing:120, padding:30}
+  });
+  cy.one('layoutstop', ()=>cy.fit(undefined,28));
+  cy.on('tap','node', ev=>showNode(ev.target.data()));
+  cy.on('tap','edge', ev=>showEdge(ev.target.data()));
+  cy.on('tap', ev=>{ if(ev.target===cy){ sel=null; clearHi(); info(''); } });
+
+  document.getElementById('stat').textContent =
+    `${cy.nodes().length} proteins · ${cy.edges().length} interactions`;
+  renderTable(es); renderVolcano(); renderLegend();
+}
+
+function clearHi(){ if(cy){ cy.elements().removeClass('dim hit'); } }
+function focus(gene){
+  if(!cy) return;
+  const n = cy.getElementById(gene); if(!n.length) return;
+  cy.elements().addClass('dim');
+  const nb = n.closedNeighborhood(); nb.removeClass('dim'); n.addClass('hit');
+}
+
+/* ---------------- detail panel ---------------- */
+const esc = s => String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function info(html){ document.getElementById('info').innerHTML = html || '<span class="muted">Select a protein or interaction.</span>'; }
+
+function showNode(d){
+  sel=d.gene; focus(d.gene); renderVolcano();
+  const up = d.uniprot ? `<a href="https://www.uniprot.org/uniprotkb/${esc(d.uniprot)}" target="_blank" rel="noopener">${esc(d.uniprot)}</a>` : '&ndash;';
+  info(`<div class="gene">${esc(d.gene)}${d.is_bait?' <span class="muted">· bait</span>':''}</div>
+    <div class="muted">${esc(d.location)}${d.length?` · ${d.length} aa`:''}</div>
+    <dl><dt>UniProt</dt><dd>${up}</dd>
+      <dt>Log<sub>2</sub> FC</dt><dd>${d.log2fc??'&ndash;'}</dd>
+      <dt>&minus;log<sub>10</sub> P</dt><dd>${d.neglogp??'&ndash;'}</dd>
+      <dt>Interactions</dt><dd>${d.degree}</dd></dl>
+    ${d.function?`<div class="fn">${esc(d.function)}</div>`:''}`);
+}
+function showEdge(d){
+  sel=null; clearHi();
+  cy.elements().addClass('dim');
+  cy.getElementById(d.id).removeClass('dim').addClass('hit');
+  cy.getElementById(d.source).removeClass('dim').addClass('hit');
+  cy.getElementById(d.target).removeClass('dim').addClass('hit');
+  const url = `${LIVIA}?data=${encodeURIComponent(BUNDLES+d.bundle)}&name=${encodeURIComponent(d.source+'-'+d.target)}`;
+  info(`<div class="gene">${esc(d.source)} &ndash; ${esc(d.target)}</div>
+    <div class="muted">best-scoring model of 5</div>
+    <dl><dt>iLIS</dt><dd>${d.ilis}</dd><dt>LIS</dt><dd>${d.lis}</dd>
+      <dt>cLIS</dt><dd>${d.clis}</dd><dt>ipTM</dt><dd>${d.iptm}</dd>
+      <dt>Score</dt><dd>${d.score} / 5</dd></dl>
+    <a class="btn" href="${url}" target="_blank" rel="noopener">Open 3D structure in LIVIA &rarr;</a>`);
+}
+
+/* ---------------- volcano ---------------- */
+function renderVolcano(){
+  const svg=document.getElementById('volcano');
+  const ns=NODES.filter(n=>n.screen===screen_ && n.log2fc!=null && n.neglogp!=null);
+  const W=svg.clientWidth||320, H=270, m={t:12,r:14,b:36,l:48};
+  if(!ns.length||W<60){ svg.innerHTML=''; return; }
+  const xs=ns.map(n=>n.log2fc), ys=ns.map(n=>n.neglogp);
+  const x0=Math.min(...xs), x1=Math.max(...xs), y0=0, y1=Math.max(...ys);
+  const X=v=>m.l+(v-x0)/((x1-x0)||1)*(W-m.l-m.r);
+  const Y=v=>H-m.b-(v-y0)/((y1-y0)||1)*(H-m.t-m.b);
+  const tick=(a,b,n=4)=>Array.from({length:n+1},(_,i)=>a+(b-a)*i/n);
+  let g='';
+  tick(y0,y1).forEach(v=>{g+=`<line x1="${m.l}" x2="${W-m.r}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}" stroke="${css('--border')}" stroke-width="1"/>
+    <text x="${m.l-6}" y="${(Y(v)+3.5).toFixed(1)}" text-anchor="end" font-size="10" fill="${css('--text-muted')}">${v.toFixed(1)}</text>`;});
+  tick(x0,x1).forEach(v=>{g+=`<text x="${X(v).toFixed(1)}" y="${H-m.b+15}" text-anchor="middle" font-size="10" fill="${css('--text-muted')}">${v.toFixed(1)}</text>`;});
+  g+=`<text x="${(m.l+(W-m.r))/2}" y="${H-4}" text-anchor="middle" font-size="10.5" fill="${css('--text-secondary')}">log₂ fold change</text>`;
+  g+=`<text transform="translate(14,${(m.t+H-m.b)/2}) rotate(-90)" text-anchor="middle" font-size="10.5" fill="${css('--text-secondary')}">−log₁₀ P</text>`;
+  ns.forEach(n=>{
+    const on = sel===n.gene, r = n.is_bait?6:4.5;
+    g+=`<circle class="vd" data-g="${esc(n.gene)}" cx="${X(n.log2fc).toFixed(1)}" cy="${Y(n.neglogp).toFixed(1)}" r="${on?r+2.5:r}"
+      fill="${on?css('--s2'):nodeColor(n)}" stroke="${css('--surface-1')}" stroke-width="2" style="cursor:pointer">
+      <title>${esc(n.gene)} — log2FC ${n.log2fc}, −log10P ${n.neglogp}</title></circle>`;
+  });
+  svg.setAttribute('viewBox',`0 0 ${W} ${H}`); svg.innerHTML=g;
+  svg.querySelectorAll('.vd').forEach(c=>c.addEventListener('click',()=>{
+    const d=NODES.find(n=>n.gene===c.dataset.g&&n.screen===screen_);
+    if(d){ showNode(d); const el=cy&&cy.getElementById(d.gene); if(el&&el.length) cy.animate({center:{eles:el},zoom:1.4},{duration:320}); }
+  }));
+}
+
+/* ---------------- legend + table ---------------- */
+function renderLegend(){
+  const L=document.getElementById('legend');
+  if(mode==='loc'){
+    L.innerHTML = [...LOC3.map((l,i)=>`<span class="key"><span class="dot" style="background:${css('--s'+(i+1))}"></span>${l}</span>`),
+      `<span class="key"><span class="dot" style="background:${css('--neutral')}"></span>Other / unknown</span>`,
+      `<span class="key" style="margin-left:auto">◆ bait · node size = interactions · edge width = iLIS</span>`].join('');
+  } else {
+    const b=fcBreaks;
+    L.innerHTML = `<span class="key">log₂ FC</span>` +
+      [1,2,3,4,5].map(i=>{
+        const lo = i===1?'low':b[i-2]?.toFixed(1), hi = i===5?'high':b[i-1]?.toFixed(1);
+        return `<span class="key"><span class="dot" style="background:${css('--seq-'+i)}"></span>${i===1?`< ${b[0]?.toFixed(1)}`:i===5?`> ${b[3]?.toFixed(1)}`:`${lo}–${hi}`}</span>`;
+      }).join('') +
+      `<span class="key" style="margin-left:auto">◆ bait · node size = interactions · edge width = iLIS</span>`;
+  }
+}
+function renderTable(es){
+  const rows=[...es].sort((a,b)=>{const v=a[sortK]<b[sortK]?-1:a[sortK]>b[sortK]?1:0;return sortAsc?v:-v;});
+  document.getElementById('tcount').textContent = `— ${rows.length} shown`;
+  document.querySelector('#tbl tbody').innerHTML = rows.map(e=>{
+    const url=`${LIVIA}?data=${encodeURIComponent(BUNDLES+e.bundle)}&name=${encodeURIComponent(e.source+'-'+e.target)}`;
+    return `<tr><td>${esc(e.source)}</td><td>${esc(e.target)}</td>
+      <td class="num">${e.ilis.toFixed(3)}</td><td class="num">${e.lis.toFixed(3)}</td>
+      <td class="num">${e.clis.toFixed(3)}</td><td class="num">${e.iptm.toFixed(2)}</td>
+      <td class="num">${e.score}</td>
+      <td><a href="${url}" target="_blank" rel="noopener">LIVIA ↗</a></td></tr>`;
+  }).join('');
+}
+
+/* ---------------- wiring ---------------- */
+function tabs(){
+  document.getElementById('tabs').innerHTML = SCREENS.map(s=>{
+    const n=EDGES.filter(e=>e.screen===s).length;
+    return `<button class="tab" role="tab" data-s="${s}" aria-selected="${s===screen_}">${s}<span class="n">${n}</span></button>`;
+  }).join('');
+  document.querySelectorAll('#tabs .tab').forEach(b=>b.onclick=()=>{
+    screen_=b.dataset.s; sel=null;
+    document.querySelectorAll('#tabs .tab').forEach(x=>x.setAttribute('aria-selected', x.dataset.s===screen_));
+    info(''); build();
+  });
+}
+document.getElementById('thr').addEventListener('input',e=>{
+  thr=+e.target.value; document.getElementById('thrv').textContent=thr.toFixed(3); build();
+});
+document.getElementById('mode').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  mode=b.dataset.m;
+  document.querySelectorAll('#mode button').forEach(x=>x.setAttribute('aria-pressed', x.dataset.m===mode));
+  if(cy) cy.nodes().forEach(n=>n.style('background-color', nodeColor(n.data())));
+  renderLegend(); renderVolcano();
+});
+document.getElementById('q').addEventListener('input',e=>{
+  const v=e.target.value.trim().toUpperCase();
+  if(!cy) return;
+  if(!v){ clearHi(); return; }
+  const hits=cy.nodes().filter(n=>n.data('gene').toUpperCase().includes(v));
+  if(!hits.length){ clearHi(); info('<span class="muted">No protein matching &ldquo;'+esc(e.target.value)+'&rdquo; in this screen.</span>'); return; }
+  cy.elements().addClass('dim');
+  hits.forEach(n=>{ n.closedNeighborhood().removeClass('dim'); n.addClass('hit'); });
+  if(hits.length===1) showNode(hits[0].data());
+});
+document.getElementById('reset').onclick=()=>{ clearHi(); sel=null; info(''); if(cy) cy.fit(undefined,30); renderVolcano(); };
+document.querySelectorAll('#tbl th[data-k]').forEach(th=>th.onclick=()=>{
+  const k=th.dataset.k; sortAsc = (k===sortK) ? !sortAsc : false; sortK=k;
+  renderTable(EDGES.filter(e=>e.screen===screen_ && e.ilis>=thr));
+});
+let rt; addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(renderVolcano,180);});
+
+Promise.all([fetch('data/nodes.csv').then(r=>r.text()), fetch('data/edges.csv').then(r=>r.text())])
+  .then(([nt,et])=>{
+    NODES=parseCSV(nt).map(n=>({...n, is_bait:+n.is_bait, degree:+n.degree,
+      log2fc:num(n.log2fc), neglogp:num(n.neglogp), length:num(n.length)}));
+    EDGES=parseCSV(et).map(e=>({...e, ilis:+e.ilis, lis:+e.lis, clis:+e.clis, iptm:+e.iptm, score:+e.score}));
+    const fcs=NODES.map(n=>n.log2fc).filter(v=>v!=null).sort((a,b)=>a-b);
+    fcBreaks=[.2,.4,.6,.8].map(p=>fcs[Math.floor(p*(fcs.length-1))]);
+    tabs(); build();
+  })
+  .catch(err=>{ document.getElementById('cy').innerHTML =
+    '<div class="loading">Could not load data/nodes.csv &amp; data/edges.csv.<br>'+esc(err.message)+'</div>'; });
+</script>
+</body>
+</html>
