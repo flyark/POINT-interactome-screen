@@ -46,6 +46,9 @@ select,input[type=search]{padding:6px 9px;border:1px solid var(--border-strong);
 input[type=search]{width:170px}
 .count{margin-left:auto;color:var(--text-secondary);font-size:13px;font-variant-numeric:tabular-nums}
 .card{background:var(--surface-1);border:1px solid var(--border);border-radius:11px;overflow:hidden}
+/* Cells are nowrap, so on a phone the table is wider than the card. Without this scroller the
+   card's overflow:hidden clips the right-hand columns and there is no way to reach them. */
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
 table{border-collapse:collapse;width:100%;font-size:13px}
 th,td{padding:8px 12px;text-align:center;border-bottom:1px solid var(--border);white-space:nowrap}
 th{position:sticky;top:0;background:var(--surface-2);cursor:pointer;font-weight:600;
@@ -69,7 +72,21 @@ tr.neg td.gene{font-weight:500;color:var(--text-secondary)}
 a{color:var(--accent)}
 .foot{margin-top:20px;color:var(--text-muted);font-size:12px;line-height:1.7}
 .empty{padding:34px;text-align:center;color:var(--text-muted)}
-@media (max-width:760px){ th,td{padding:7px 8px} .hide-s{display:none} }
+@media (max-width:760px){
+  .wrap{padding:16px 12px 40px}
+  th,td{padding:7px 8px}
+  .hide-s{display:none}
+  /* Long option text must not push the controls wider than the viewport. */
+  label.f{min-width:0} select{min-width:0;max-width:100%}
+  input[type=search]{width:100%}
+  /* Pin Structure to the right edge so the LIVIA link is tappable without swiping first. */
+  th.stk,td.stk{position:sticky;right:0;background:var(--surface-1);
+    border-left:1px solid var(--border)}
+  td.stk{z-index:1}
+  th.stk{background:var(--surface-2);z-index:2}
+  tbody tr:hover td.stk{background:var(--surface-2)}
+  td.stk a{display:block;padding:4px 2px}
+}
 </style>
 </head>
 <body>
@@ -102,6 +119,7 @@ a{color:var(--accent)}
   </div>
 
   <div class="card">
+    <div class="scroll">
     <table id="tbl">
       <thead><tr>
         <th data-k="screen" class="hide-s">Screen <span class="ar">&#8645;</span></th>
@@ -111,10 +129,11 @@ a{color:var(--accent)}
         <th data-k="iLIS_avg"  class="num">iLIS avg <span class="ar">&#8645;</span></th>
         <th data-k="ipTM_best" class="num">ipTM best <span class="ar">&#8645;</span></th>
         <th data-k="ipTM_avg"  class="num">ipTM avg <span class="ar">&#8645;</span></th>
-        <th>Structure</th>
+        <th class="stk">Structure</th>
       </tr></thead>
       <tbody><tr><td colspan="8" class="empty">Loading&hellip;</td></tr></tbody>
     </table>
+    </div>
   </div>
 
   <p class="foot">
@@ -180,7 +199,7 @@ function render(){
       <td class="num ilis ${bandBest(r.iLIS_best)}">${r.iLIS_best.toFixed(3)}</td>
       <td class="num ilis ${bandAvg(r.iLIS_avg)}">${r.iLIS_avg.toFixed(3)}</td>
       <td class="num">${r.ipTM_best.toFixed(2)}</td><td class="num">${r.ipTM_avg.toFixed(2)}</td>
-      <td>${cell}</td></tr>`;
+      <td class="stk">${cell}</td></tr>`;
   }).join('') : `<tr><td colspan="8" class="empty">Nothing matches the current filters.</td></tr>`;
   document.querySelectorAll('#tbl th[data-k]').forEach(th=>{
     if(th.dataset.k===sortK) th.setAttribute('aria-sort', sortAsc?'ascending':'descending');
