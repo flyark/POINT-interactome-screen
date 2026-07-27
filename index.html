@@ -75,10 +75,7 @@ a{color:var(--accent)}
 <body>
 <div class="wrap">
   <h1>POINT Interactome AlphaFold-Multimer Screen</h1>
-  <p class="sub">All protein&ndash;protein interactions predicted by AlphaFold-Multimer among the proteins
-     enriched in each POINT proximity-labeling experiment. <strong>best</strong> = highest-iLIS model of 5;
-     <strong>avg</strong> = mean across all 5. Structures are provided for pairs passing the 10&thinsp;% FPR cutoff
-     on <strong>iLIS best</strong> (&ge;&thinsp;0.223).</p>
+  <p class="sub">All protein&ndash;protein interactions predicted by AlphaFold-Multimer among the proteins enriched in each POINT proximity-labeling experiment. <strong>best</strong> = highest-iLIS model of 5; <strong>avg</strong> = mean across all 5. Structures are provided for pairs passing the 10&thinsp;% FPR cutoff on <strong>iLIS best</strong> (&ge;&thinsp;0.223).</p>
 
   <div class="bar">
     <div class="tabs" id="tabs"></div>
@@ -133,7 +130,7 @@ a{color:var(--accent)}
 <script>
 const BUNDLES='https://flyark.github.io/POINT-interactome-screen-structures/bundles/';
 const LIVIA='https://flyark.github.io/LIVIA/universal.html';
-const SCREENS=['PTBP1','POU2F1','PSMA2'];
+const SCREENS=["PTBP1", "POU2F1", "PSMA2"];
 const NUM=new Set(['iLIS_best','iLIS_avg','ipTM_best','ipTM_avg']);
 let ROWS=[], screen_='all', cut=0.223, q='', sortK='iLIS_best', sortAsc=false;
 
@@ -150,10 +147,14 @@ function parseCSV(t){
   return out.filter(r=>r.length===h.length).map(r=>Object.fromEntries(h.map((k,i)=>[k,r[i]])));
 }
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const passCut = r => r.iLIS_best >= cut;
+// Cutoffs use the published rounding convention (a value rounding to 0.339 counts at 5% FPR),
+// expressed as v >= cut - EPS rather than actually rounding: numpy round-half-to-even and JS
+// Math.round half-up disagree on .5 cases. Same form as screen_site_config.at_or_above().
+const EPS=0.0005, ge = (v,c) => v >= c - EPS - 1e-9;
+const passCut = r => ge(r.iLIS_best, cut);
 // FPR bands, same thresholds and hue order LIVIA uses (purple 1% → green 5% → amber 10% → grey below)
-const bandBest = v => v>=0.551?'b1' : v>=0.339?'b5' : v>=0.223?'b10' : 'b0';
-const bandAvg  = v => v>=0.303?'b1' : v>=0.120?'b5' : v>=0.073?'b10' : 'b0';
+const bandBest = v => ge(v,0.551)?'b1' : ge(v,0.339)?'b5' : ge(v,0.223)?'b10' : 'b0';
+const bandAvg  = v => ge(v,0.303)?'b1' : ge(v,0.120)?'b5' : ge(v,0.073)?'b10' : 'b0';
 const matchQ = (r,n) => !n || r.protein_1.toUpperCase().includes(n) || r.protein_2.toUpperCase().includes(n);
 
 function view(){
@@ -218,7 +219,7 @@ fetch('data/interactions.csv?v=3293').then(r=>r.text()).then(t=>{
   ROWS=parseCSV(t).map(r=>{
     const o={...r, iLIS_best:+r.iLIS_best, iLIS_avg:+r.iLIS_avg,
              ipTM_best:+r.ipTM_best, ipTM_avg:+r.ipTM_avg};
-    o.positive = o.iLIS_best >= 0.223 ? 1 : 0;   // derived, never trusted from the file
+    o.positive = ge(o.iLIS_best, 0.223) ? 1 : 0;   // derived, never trusted from the file
     return o;
   });
   tabs(); render();
