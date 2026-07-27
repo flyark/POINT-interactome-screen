@@ -64,7 +64,6 @@ td.ilis{font-weight:700}
 td.gene{font-weight:600}
 tbody tr:hover{background:var(--surface-2)}
 tr.neg td.gene{font-weight:500;color:var(--text-secondary)}
-tr.neg td.num{color:var(--text-secondary)}
 .grp{color:var(--text-muted);font-size:12px}
 .dash{color:var(--text-muted)}
 a{color:var(--accent)}
@@ -213,9 +212,15 @@ document.querySelectorAll('#tbl th[data-k]').forEach(th=>th.onclick=()=>{
   sortK=k; render();
 });
 
-fetch('data/interactions.csv').then(r=>r.text()).then(t=>{
-  ROWS=parseCSV(t).map(r=>({...r, positive:+r.positive,
-    iLIS_best:+r.iLIS_best, iLIS_avg:+r.iLIS_avg, ipTM_best:+r.ipTM_best, ipTM_avg:+r.ipTM_avg}));
+// ?v= defeats the browser cache: the CSV path never changes, so a stale copy from an older
+// deploy (different columns) would otherwise be reused and silently mis-render every row.
+fetch('data/interactions.csv?v=3293').then(r=>r.text()).then(t=>{
+  ROWS=parseCSV(t).map(r=>{
+    const o={...r, iLIS_best:+r.iLIS_best, iLIS_avg:+r.iLIS_avg,
+             ipTM_best:+r.ipTM_best, ipTM_avg:+r.ipTM_avg};
+    o.positive = o.iLIS_best >= 0.223 ? 1 : 0;   // derived, never trusted from the file
+    return o;
+  });
   tabs(); render();
 }).catch(e=>{
   document.querySelector('#tbl tbody').innerHTML =
